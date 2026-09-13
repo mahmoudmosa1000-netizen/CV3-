@@ -134,6 +134,7 @@ const TEMPLATE_PREVIEWS = {
   sidebar: `<div class="template-opt-preview"><div class="tp-left"></div><div class="tp-right"><div class="tp-line short"></div><div class="tp-line"></div><div class="tp-line"></div><div class="tp-line short"></div></div></div>`,
   single: `<div class="template-opt-preview tp-single-preview"><div class="tp-avatar"></div><div class="tp-line short"></div><div class="tp-line"></div><div class="tp-line"></div></div>`,
   ats: `<div class="template-opt-preview tp-single-preview"><div class="tp-line short" style="background:#333;"></div><div class="tp-line"></div><div class="tp-line"></div><div class="tp-line short"></div></div>`,
+  timeline: `<div class="template-opt-preview" style="flex-direction:column;padding:8px 10px;"><div class="tp-line short" style="width:50%;margin:0 auto 6px;"></div><div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;"><div style="width:6px;height:6px;border-radius:50%;background:var(--g-muted);flex-shrink:0;"></div><div class="tp-line" style="margin:0;flex:1;"></div></div><div style="display:flex;align-items:center;gap:6px;"><div style="width:6px;height:6px;border-radius:50%;background:var(--g-muted);flex-shrink:0;"></div><div class="tp-line" style="margin:0;flex:1;"></div></div></div>`,
 };
 
 function buildTemplatePicker() {
@@ -1128,6 +1129,12 @@ const TEMPLATES = {
     supportsLeftRight: false,
     plain: true,                    // keine Farbflächen/Balken/Icons — bewusst reiner Text für Bewerbungstracking-Systeme
   },
+  timeline: {
+    id: 'timeline',
+    nameKey: 'tplTimelineName',
+    hasSidebar: false,
+    supportsLeftRight: false,
+  },
   // Weitere Templates (einspaltig, Header oben, Timeline, ATS-kompakt, Kreativ)
   // werden hier mit ihren eigenen Capability-Flags ergänzt (Schritt 5+8).
 };
@@ -1429,7 +1436,7 @@ function renderTemplateSidebar(data){
       const refs=data.refs;
       if(!refs.length) return '';
       let s=`<div class="cv-section-head" style="color:${col};font-size:${Math.round(8.5*fScale)}px;">${t('cvReferenzen')}</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">`;
-      refs.forEach(r=>{s+=`<div style="background:#f8faf8;border-radius:6px;padding:10px 12px;border-left:2.5px solid ${colLight};"><div style="font-weight:700;font-size:${Math.round(12*fScale)}px;color:#1a2818;">${h(r.name)}</div>${r.pos?`<div style="font-size:${Math.round(10.5*fScale)}px;font-style:italic;color:${colDark2};">${h(r.pos)}</div>`:''} ${r.company?`<div style="font-size:${Math.round(10.5*fScale)}px;color:#555;">${h(r.company)}</div>`:''} ${r.email?`<div style="font-size:${Math.round(10*fScale)}px;color:#666;margin-top:4px;">${h(r.email)}</div>`:''} ${r.phone?`<div style="font-size:${Math.round(10*fScale)}px;color:#666;">${h(r.phone)}</div>`:''} ${r.note?`<div style="font-size:${Math.round(10*fScale)}px;color:#999;font-style:italic;">${h(r.note)}</div>`:''}</div>`;});
+      refs.forEach(r=>{s+=`<div style="background:#f8faf8;border-radius:6px;padding:10px 12px;border-inline-start:2.5px solid ${colLight};"><div style="font-weight:700;font-size:${Math.round(12*fScale)}px;color:#1a2818;">${h(r.name)}</div>${r.pos?`<div style="font-size:${Math.round(10.5*fScale)}px;font-style:italic;color:${colDark2};">${h(r.pos)}</div>`:''} ${r.company?`<div style="font-size:${Math.round(10.5*fScale)}px;color:#555;">${h(r.company)}</div>`:''} ${r.email?`<div style="font-size:${Math.round(10*fScale)}px;color:#666;margin-top:4px;">${h(r.email)}</div>`:''} ${r.phone?`<div style="font-size:${Math.round(10*fScale)}px;color:#666;">${h(r.phone)}</div>`:''} ${r.note?`<div style="font-size:${Math.round(10*fScale)}px;color:#999;font-style:italic;">${h(r.note)}</div>`:''}</div>`;});
       return s+`</div>`;
     },
     zertifikate:()=>{
@@ -1555,7 +1562,7 @@ function renderTemplateSidebar(data){
     initFolioOverlayDrag(ov, l.id);
   });
 
-  document.getElementById('cv-paper').classList.remove('tpl-single','tpl-ats');
+  document.getElementById('cv-paper').classList.remove('tpl-single','tpl-ats','tpl-timeline');
   const cvLeft=document.getElementById('cv-left');
   cvLeft.style.backgroundColor=col; cvLeft.style.color='#fff'; cvLeft.innerHTML=leftHTML;
   const cvRight=document.getElementById('cv-right');
@@ -1593,16 +1600,25 @@ function renderPage2Sheet(data, ctx){
 //  in collectCVData für dieses Template auf 'right' erzwungen)
 //  — nichts kann in eine fehlende Sidebar "verschwinden".
 // ═══════════════════════════════════════════════
-function renderTemplateSingleColumn(data){
-  const col=data.color, font=data.font;
-  const colLight=lighten(col,0.55), colDark2=colLight2(col);
-  const fScale=data.fScale, lineH=data.lineH;
-  const {name, role, email, phone, address, birth, web, webLabel, linkedin, summary, goal, komps, hobbies, hobbiesSize, activeLic, licNote, folio, folioLabel, folioShowLink} = data;
+// ═══════════════════════════════════════════════
+//  GEMEINSAME BAUSTEINE für "Einspaltig" & "Timeline"
+//  Beide Templates unterscheiden sich nur in der Darstellung von
+//  Erfahrung/Bildung (Karten vs. Zeitleiste) — alles andere ist
+//  identisch und wird hier zentral gepflegt, damit künftige
+//  Änderungen nicht mehrfach gemacht werden müssen.
+// ═══════════════════════════════════════════════
+function makeCreativeSectionTitle(col, colLight){
+  return key=>`<div class="cv-single-section-title" style="color:${col};border-color:${colLight};">${t(key)}</div>`;
+}
 
+function buildCreativeHeaderHTML(data, ctx){
+  const {col, colDark2, font, fScale} = ctx;
+  const {name, role, email, phone, address, birth, web, webLabel, linkedin, folio, folioLabel, folioShowLink} = data;
   const photoSrc=data.photoData;
   const photoSize=Math.min(parseInt(data.photoSize)||120, 90);
   const borderRadius=data.photoShape==='square'?'10px':'50%';
   const initials=name.split(' ').map(w=>w[0]||'').slice(0,2).join('').toUpperCase();
+  const colLight=ctx.colLight;
   const avatarHTML=photoSrc
     ?`<img src="${photoSrc}" style="width:${photoSize}px;height:${photoSize}px;border-radius:${borderRadius};object-fit:cover;object-position:center top;border:3px solid ${colLight};display:block;">`
     :`<div style="width:${photoSize}px;height:${photoSize}px;border-radius:${borderRadius};background:linear-gradient(145deg,${colLight} 0%,${col} 100%);display:flex;align-items:center;justify-content:center;font-family:${font};color:#fff;font-size:${Math.round(photoSize*0.28)}px;font-weight:700;">${initials||'CV'}</div>`;
@@ -1617,21 +1633,119 @@ function renderTemplateSingleColumn(data){
   if(folio&&folioShowLink){const href=folio.startsWith('http')?folio:'https://'+folio;contactBits.push(`<span><a href="${href}" target="_blank" style="color:${col};text-decoration:underline;font-weight:600;">${h(folioLabel)}</a></span>`);}
   data.folioLinks.filter(l=>l.showLink).forEach(l=>{const href=l.url.startsWith('http')?l.url:'https://'+l.url;contactBits.push(`<span><a href="${href}" target="_blank" style="color:${col};text-decoration:underline;font-weight:600;">${h(l.label||l.url)}</a></span>`);});
 
-  let out=`<div class="cv-single-header">
+  return `<div class="cv-single-header">
     <div class="cv-single-avatar-wrap">${avatarHTML}</div>
     <div style="font-family:${font};font-size:${Math.round(24*fScale)}px;font-weight:800;color:#1a2818;">${h(name)}</div>
     <div style="color:${colDark2};font-size:${Math.round(11*fScale)}px;font-weight:500;margin-top:2px;">${h(role)}</div>
     <div class="cv-single-contact-row" style="font-size:${Math.round(10.5*fScale)}px;">${contactBits.join('')}</div>
   </div>`;
+}
 
-  const sectionTitle=key=>`<div class="cv-single-section-title" style="color:${col};border-color:${colLight};">${t(key)}</div>`;
-  const renderTxt=txt=>h(txt);
+function buildSummaryHTML(data, ctx, sectionTitle){
+  const {fScale, lineH} = ctx;
+  const {summary, goal} = data;
+  if(!summary && !goal) return '';
+  let s=sectionTitle('cvProfile');
+  if(summary) s+=`<div class="cv-summary" style="font-size:${Math.round(11.5*fScale)}px;line-height:${lineH};">${h(summary)}</div>`;
+  if(goal) s+=`<div class="cv-summary" style="font-size:${Math.round(11.5*fScale)}px;line-height:${lineH};margin-top:6px;font-style:italic;color:#666;">${h(goal)}</div>`;
+  return s;
+}
 
-  if(summary||goal){
-    out+=sectionTitle('cvProfile');
-    if(summary) out+=`<div class="cv-summary" style="font-size:${Math.round(11.5*fScale)}px;line-height:${lineH};">${renderTxt(summary)}</div>`;
-    if(goal) out+=`<div class="cv-summary" style="font-size:${Math.round(11.5*fScale)}px;line-height:${lineH};margin-top:6px;font-style:italic;color:#666;">${renderTxt(goal)}</div>`;
+function buildSkillsBarsHTML(data, ctx, sectionTitle){
+  const {col, fScale} = ctx;
+  if(!data.skills.length) return '';
+  let s=sectionTitle('cvSkills')+`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 20px;">`;
+  data.skills.forEach(sk=>{const p=Math.min(100,Math.max(0,parseInt(sk.pct)||50));
+    s+=`<div><div style="font-size:${Math.round(11*fScale)}px;color:#333;margin-bottom:3px;">${h(sk.name)}</div><div style="height:4px;background:#eee;border-radius:2px;"><div style="height:4px;width:${p}%;background:${col};border-radius:2px;"></div></div></div>`;});
+  return s+`</div>`;
+}
+
+function buildLangsDotsHTML(data, ctx, sectionTitle){
+  const {col, fScale} = ctx;
+  if(!data.langs.length) return '';
+  const dotsMap={native:5,advanced:4,intermediate:3,basic:2,Muttersprache:5,Fortgeschritten:4,Mittelstufe:3,Grundkenntnisse:2};
+  const lvLabelMap={native:t('optNative'),advanced:t('optAdvanced'),intermediate:t('optIntermediate'),basic:t('optBasic'),Muttersprache:t('optNative'),Fortgeschritten:t('optAdvanced'),Mittelstufe:t('optIntermediate'),Grundkenntnisse:t('optBasic')};
+  let s=sectionTitle('cvLanguages')+`<div style="display:flex;flex-wrap:wrap;gap:14px;">`;
+  data.langs.forEach(l=>{const dots=dotsMap[l.level]||3;let dotHtml='';for(let i=0;i<5;i++)dotHtml+=`<div style="width:6px;height:6px;border-radius:50%;background:${i<dots?col:'#e2e2e2'};"></div>`;
+    s+=`<div><div style="font-size:${Math.round(11*fScale)}px;font-weight:600;color:#333;">${h(l.name)}</div><div style="font-size:9.5px;color:#888;margin:2px 0 4px;">${lvLabelMap[l.level]||h(l.level)}</div><div style="display:flex;gap:4px;">${dotHtml}</div></div>`;});
+  return s+`</div>`;
+}
+
+function buildKompsHobbiesLicenseHTML(data, ctx, sectionTitle){
+  const {colLight, fScale, col} = ctx;
+  const {komps, hobbies, hobbiesSize, activeLic, licNote} = data;
+  let s='';
+  if(komps.trim()){
+    s+=sectionTitle('cvKomps')+`<div class="cv-komps">`;
+    komps.split('\n').forEach(k=>{if(k.trim())s+=`<div class="cv-komp" style="border-inline-start-color:${colLight};font-size:${Math.round(10.5*fScale)}px;">${h(k.trim())}</div>`;});
+    s+=`</div>`;
   }
+  if(hobbies){
+    s+=sectionTitle('cvInterests')+`<div style="display:flex;flex-wrap:wrap;gap:5px;">`;
+    hobbies.split(',').forEach(tag=>{if(tag.trim())s+=`<span style="background:${colLight}22;border:1px solid ${colLight};border-radius:5px;padding:3px 10px;font-size:${hobbiesSize}px;color:#444;font-weight:500;">${h(tag.trim())}</span>`;});
+    s+=`</div>`;
+  }
+  if(activeLic.length||data.extraquals.length){
+    s+=sectionTitle('cvExtraQual');
+    if(activeLic.length){
+      s+=`<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px;"><span style="font-size:${Math.round(11*fScale)}px;font-weight:600;color:#444;">${t('cvLicense')||'Führerschein'}:</span><div style="display:flex;flex-wrap:wrap;gap:5px;">${activeLic.map(c=>`<span style="background:${col};color:#fff;border-radius:5px;padding:2px 9px;font-size:${Math.round(10.5*fScale)}px;font-weight:700;">${c}</span>`).join('')}</div></div>`;
+      if(licNote) s+=`<div style="font-size:${Math.round(11*fScale)}px;color:#666;margin-bottom:6px;font-style:italic;">${h(licNote)}</div>`;
+    }
+    if(data.extraquals.length){
+      s+=`<div class="cv-komps" style="margin-top:4px;">`;
+      data.extraquals.forEach(e=>{s+=`<div class="cv-komp" style="border-inline-start-color:${colLight};font-size:${Math.round(10.5*fScale)}px;"><span style="font-weight:700;">${h(e.title)}</span>${e.detail?`<span style="font-size:${Math.round(10*fScale)}px;color:#888;display:block;margin-top:2px;">${h(e.detail)}</span>`:''}</div>`;});
+      s+=`</div>`;
+    }
+  }
+  return s;
+}
+
+function buildRefsCertsProjectsHTML(data, ctx, sectionTitle){
+  const {colLight, colDark2, col, fScale, lineH} = ctx;
+  let s='';
+  if(data.refs.length){
+    s+=sectionTitle('cvReferenzen')+`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">`;
+    data.refs.forEach(r=>{s+=`<div style="background:#f8faf8;border-radius:6px;padding:10px 12px;border-inline-start:2.5px solid ${colLight};"><div style="font-weight:700;font-size:${Math.round(12*fScale)}px;color:#1a2818;">${h(r.name)}</div>${r.pos?`<div style="font-size:${Math.round(10.5*fScale)}px;font-style:italic;color:${colDark2};">${h(r.pos)}</div>`:''}${r.company?`<div style="font-size:${Math.round(10.5*fScale)}px;color:#555;">${h(r.company)}</div>`:''}${r.email?`<div style="font-size:${Math.round(10*fScale)}px;color:#666;margin-top:4px;">${h(r.email)}</div>`:''}${r.phone?`<div style="font-size:${Math.round(10*fScale)}px;color:#666;">${h(r.phone)}</div>`:''}${r.note?`<div style="font-size:${Math.round(10*fScale)}px;color:#999;font-style:italic;">${h(r.note)}</div>`:''}</div>`;});
+    s+=`</div>`;
+  }
+  if(data.certs.length){
+    s+=sectionTitle('cvZertifikate');
+    data.certs.forEach(c=>{const link=c.url?(c.url.startsWith('http')?c.url:'https://'+c.url):'';s+=`<div class="cv-entry" style="border-inline-start-color:${colLight};"><div class="cv-entry-head"><span class="cv-entry-title" style="font-size:${Math.round(12.5*fScale)}px;">${link?`<a href="${link}" target="_blank" style="color:inherit;text-decoration:none;">`:''}${h(c.title)}${link?`</a>`:''}</span><span class="cv-entry-date" style="color:${colDark2};font-size:${Math.round(10*fScale)}px;">${h(c.date)}</span></div>${c.issuer?`<div class="cv-entry-sub" style="color:${colDark2};font-size:${Math.round(11*fScale)}px;">${h(c.issuer)}</div>`:''}</div>`;});
+  }
+  if(data.projects.length){
+    s+=sectionTitle('cvProjekte');
+    data.projects.forEach(p=>{const link=p.url?(p.url.startsWith('http')?p.url:'https://'+p.url):'';s+=`<div class="cv-entry" style="border-inline-start-color:${colLight};"><div class="cv-entry-head"><span class="cv-entry-title" style="font-size:${Math.round(12.5*fScale)}px;">${link?`<a href="${link}" target="_blank" style="color:${col};text-decoration:none;">`:''}${h(p.title)}${link?`</a>`:''}</span><span class="cv-entry-date" style="color:${colDark2};font-size:${Math.round(10*fScale)}px;">${h(p.from)}${p.to?' – '+h(p.to):''}</span></div>${p.desc?`<div class="cv-entry-desc" style="font-size:${Math.round(11*fScale)}px;line-height:${lineH};">${h(p.desc).replace(/\n/g,'<br>')}</div>`:''}</div>`;});
+  }
+  return s;
+}
+
+function buildFolioQRHTML(data, ctx, sectionTitle){
+  const qrLinks=data.folioLinks.filter(l=>l.showQR&&l.qrDataUrl);
+  if(!qrLinks.length) return '';
+  let s=sectionTitle('cvFolioSection')+`<div style="display:flex;flex-wrap:wrap;gap:10px;">`;
+  qrLinks.forEach(l=>{s+=`<div style="text-align:center;"><img src="${l.qrDataUrl}" style="width:62px;height:62px;image-rendering:crisp-edges;background:#fff;padding:3px;border-radius:4px;display:block;"><div style="font-size:8px;margin-top:3px;opacity:0.6;font-weight:600;">${h(l.label)}</div></div>`;});
+  return s+`</div>`;
+}
+
+// Fügt Summary → (Aufrufer rendert hier Erfahrung/Bildung template-spezifisch) →
+// Skills → Sprachen → Komps/Hobbies/Führerschein → Referenzen/Zertifikate/Projekte → Folio-QR zusammen.
+function buildCreativeTailSectionsHTML(data, ctx, sectionTitle){
+  return buildSkillsBarsHTML(data, ctx, sectionTitle)
+    + buildLangsDotsHTML(data, ctx, sectionTitle)
+    + buildKompsHobbiesLicenseHTML(data, ctx, sectionTitle)
+    + buildRefsCertsProjectsHTML(data, ctx, sectionTitle)
+    + buildFolioQRHTML(data, ctx, sectionTitle);
+}
+
+function renderTemplateSingleColumn(data){
+  const col=data.color, font=data.font;
+  const colLight=lighten(col,0.55), colDark2=colLight2(col);
+  const fScale=data.fScale, lineH=data.lineH;
+  const ctx={col, colLight, colDark2, font, fScale, lineH};
+  const sectionTitle=makeCreativeSectionTitle(col, colLight);
+
+  let out=buildCreativeHeaderHTML(data, ctx);
+  out+=buildSummaryHTML(data, ctx, sectionTitle);
 
   const renderEntries=(entries,titleKey,titleField,subField)=>{
     if(!entries.length) return;
@@ -1643,78 +1757,18 @@ function renderTemplateSingleColumn(data){
   renderEntries(data.exp,'cvExperience','title','company');
   renderEntries(data.edu,'cvEducation','degree','school');
 
-  if(data.skills.length){
-    out+=sectionTitle('cvSkills');
-    out+=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 20px;">`;
-    data.skills.forEach(s=>{const p=Math.min(100,Math.max(0,parseInt(s.pct)||50));
-      out+=`<div><div style="font-size:${Math.round(11*fScale)}px;color:#333;margin-bottom:3px;">${h(s.name)}</div><div style="height:4px;background:#eee;border-radius:2px;"><div style="height:4px;width:${p}%;background:${col};border-radius:2px;"></div></div></div>`;});
-    out+=`</div>`;
-  }
-
-  if(data.langs.length){
-    out+=sectionTitle('cvLanguages');
-    const dotsMap={native:5,advanced:4,intermediate:3,basic:2,Muttersprache:5,Fortgeschritten:4,Mittelstufe:3,Grundkenntnisse:2};
-    const lvLabelMap={native:t('optNative'),advanced:t('optAdvanced'),intermediate:t('optIntermediate'),basic:t('optBasic'),Muttersprache:t('optNative'),Fortgeschritten:t('optAdvanced'),Mittelstufe:t('optIntermediate'),Grundkenntnisse:t('optBasic')};
-    out+=`<div style="display:flex;flex-wrap:wrap;gap:14px;">`;
-    data.langs.forEach(l=>{const dots=dotsMap[l.level]||3;let dotHtml='';for(let i=0;i<5;i++)dotHtml+=`<div style="width:6px;height:6px;border-radius:50%;background:${i<dots?col:'#e2e2e2'};"></div>`;
-      out+=`<div><div style="font-size:${Math.round(11*fScale)}px;font-weight:600;color:#333;">${h(l.name)}</div><div style="font-size:9.5px;color:#888;margin:2px 0 4px;">${lvLabelMap[l.level]||h(l.level)}</div><div style="display:flex;gap:4px;">${dotHtml}</div></div>`;});
-    out+=`</div>`;
-  }
-
-  if(komps.trim()){
-    out+=sectionTitle('cvKomps')+`<div class="cv-komps">`;
-    komps.split('\n').forEach(k=>{if(k.trim())out+=`<div class="cv-komp" style="border-inline-start-color:${colLight};font-size:${Math.round(10.5*fScale)}px;">${h(k.trim())}</div>`;});
-    out+=`</div>`;
-  }
-  if(hobbies){
-    out+=sectionTitle('cvInterests')+`<div style="display:flex;flex-wrap:wrap;gap:5px;">`;
-    hobbies.split(',').forEach(tag=>{if(tag.trim())out+=`<span style="background:${colLight}22;border:1px solid ${colLight};border-radius:5px;padding:3px 10px;font-size:${hobbiesSize}px;color:#444;font-weight:500;">${h(tag.trim())}</span>`;});
-    out+=`</div>`;
-  }
-  if(activeLic.length||data.extraquals.length){
-    out+=sectionTitle('cvExtraQual');
-    if(activeLic.length){
-      out+=`<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px;"><span style="font-size:${Math.round(11*fScale)}px;font-weight:600;color:#444;">${t('cvLicense')||'Führerschein'}:</span><div style="display:flex;flex-wrap:wrap;gap:5px;">${activeLic.map(c=>`<span style="background:${col};color:#fff;border-radius:5px;padding:2px 9px;font-size:${Math.round(10.5*fScale)}px;font-weight:700;">${c}</span>`).join('')}</div></div>`;
-      if(licNote) out+=`<div style="font-size:${Math.round(11*fScale)}px;color:#666;margin-bottom:6px;font-style:italic;">${h(licNote)}</div>`;
-    }
-    if(data.extraquals.length){
-      out+=`<div class="cv-komps" style="margin-top:4px;">`;
-      data.extraquals.forEach(e=>{out+=`<div class="cv-komp" style="border-inline-start-color:${colLight};font-size:${Math.round(10.5*fScale)}px;"><span style="font-weight:700;">${h(e.title)}</span>${e.detail?`<span style="font-size:${Math.round(10*fScale)}px;color:#888;display:block;margin-top:2px;">${h(e.detail)}</span>`:''}</div>`;});
-      out+=`</div>`;
-    }
-  }
-
-  if(data.refs.length){
-    out+=sectionTitle('cvReferenzen')+`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">`;
-    data.refs.forEach(r=>{out+=`<div style="background:#f8faf8;border-radius:6px;padding:10px 12px;border-left:2.5px solid ${colLight};"><div style="font-weight:700;font-size:${Math.round(12*fScale)}px;color:#1a2818;">${h(r.name)}</div>${r.pos?`<div style="font-size:${Math.round(10.5*fScale)}px;font-style:italic;color:${colDark2};">${h(r.pos)}</div>`:''}${r.company?`<div style="font-size:${Math.round(10.5*fScale)}px;color:#555;">${h(r.company)}</div>`:''}${r.email?`<div style="font-size:${Math.round(10*fScale)}px;color:#666;margin-top:4px;">${h(r.email)}</div>`:''}${r.phone?`<div style="font-size:${Math.round(10*fScale)}px;color:#666;">${h(r.phone)}</div>`:''}${r.note?`<div style="font-size:${Math.round(10*fScale)}px;color:#999;font-style:italic;">${h(r.note)}</div>`:''}</div>`;});
-    out+=`</div>`;
-  }
-  if(data.certs.length){
-    out+=sectionTitle('cvZertifikate');
-    data.certs.forEach(c=>{const link=c.url?(c.url.startsWith('http')?c.url:'https://'+c.url):'';out+=`<div class="cv-entry" style="border-inline-start-color:${colLight};"><div class="cv-entry-head"><span class="cv-entry-title" style="font-size:${Math.round(12.5*fScale)}px;">${link?`<a href="${link}" target="_blank" style="color:inherit;text-decoration:none;">`:''}${h(c.title)}${link?`</a>`:''}</span><span class="cv-entry-date" style="color:${colDark2};font-size:${Math.round(10*fScale)}px;">${h(c.date)}</span></div>${c.issuer?`<div class="cv-entry-sub" style="color:${colDark2};font-size:${Math.round(11*fScale)}px;">${h(c.issuer)}</div>`:''}</div>`;});
-  }
-  if(data.projects.length){
-    out+=sectionTitle('cvProjekte');
-    data.projects.forEach(p=>{const link=p.url?(p.url.startsWith('http')?p.url:'https://'+p.url):'';out+=`<div class="cv-entry" style="border-inline-start-color:${colLight};"><div class="cv-entry-head"><span class="cv-entry-title" style="font-size:${Math.round(12.5*fScale)}px;">${link?`<a href="${link}" target="_blank" style="color:${col};text-decoration:none;">`:''}${h(p.title)}${link?`</a>`:''}</span><span class="cv-entry-date" style="color:${colDark2};font-size:${Math.round(10*fScale)}px;">${h(p.from)}${p.to?' – '+h(p.to):''}</span></div>${p.desc?`<div class="cv-entry-desc" style="font-size:${Math.round(11*fScale)}px;line-height:${lineH};">${h(p.desc).replace(/\n/g,'<br>')}</div>`:''}</div>`;});
-  }
-
-  const qrLinks=data.folioLinks.filter(l=>l.showQR&&l.qrDataUrl);
-  if(qrLinks.length){
-    out+=sectionTitle('cvFolioSection')+`<div style="display:flex;flex-wrap:wrap;gap:10px;">`;
-    qrLinks.forEach(l=>{out+=`<div style="text-align:center;"><img src="${l.qrDataUrl}" style="width:62px;height:62px;image-rendering:crisp-edges;background:#fff;padding:3px;border-radius:4px;display:block;"><div style="font-size:8px;margin-top:3px;opacity:0.6;font-weight:600;">${h(l.label)}</div></div>`;});
-    out+=`</div>`;
-  }
+  out+=buildCreativeTailSectionsHTML(data, ctx, sectionTitle);
 
   const paper=document.getElementById('cv-paper');
   paper.classList.add('tpl-single');
-  paper.classList.remove('tpl-ats');
+  paper.classList.remove('tpl-ats','tpl-timeline');
   paper.style.fontFamily='"Source Sans 3",sans-serif';
   document.getElementById('cv-left').innerHTML='';
   const cvRight=document.getElementById('cv-right');
   cvRight.innerHTML=out;
   cvRight.style.backgroundColor='#ffffff';
 
-  renderPage2Sheet(data, {col, colLight, colDark2, font, fScale, lineH, name, role, email, phone, web, webLabel});
+  renderPage2Sheet(data, {col, colLight, colDark2, font, fScale, lineH, name:data.name, role:data.role, email:data.email, phone:data.phone, web:data.web, webLabel:data.webLabel});
   updateProgress();
 }
 
@@ -1805,7 +1859,7 @@ function renderTemplateATS(data){
 
   const paper=document.getElementById('cv-paper');
   paper.classList.add('tpl-ats');
-  paper.classList.remove('tpl-single');
+  paper.classList.remove('tpl-single','tpl-timeline');
   paper.style.fontFamily='"Source Sans 3",sans-serif';
   document.getElementById('cv-left').innerHTML='';
   const cvRight=document.getElementById('cv-right');
@@ -1816,10 +1870,56 @@ function renderTemplateATS(data){
   updateProgress();
 }
 
+// ═══════════════════════════════════════════════
+//  TEMPLATE: TIMELINE
+//  Wie "Einspaltig", aber Erfahrung/Bildung als vertikale
+//  Zeitleiste mit Punkten statt einfacher Karten — passend für
+//  Kreativ-/Design-Berufe. Alle übrigen Abschnitte identisch zum
+//  Einspaltig-Template (bewusst, für Konsistenz).
+// ═══════════════════════════════════════════════
+function renderTemplateTimeline(data){
+  const col=data.color, font=data.font;
+  const colLight=lighten(col,0.55), colDark2=colLight2(col);
+  const fScale=data.fScale, lineH=data.lineH;
+  const ctx={col, colLight, colDark2, font, fScale, lineH};
+  const sectionTitle=makeCreativeSectionTitle(col, colLight);
+
+  let out=buildCreativeHeaderHTML(data, ctx);
+  out+=buildSummaryHTML(data, ctx, sectionTitle);
+
+  // ── ERFAHRUNG / BILDUNG als Zeitleiste (einziger Unterschied zu "Einspaltig") ──
+  const renderTimelineEntries=(entries,titleKey,titleField,subField)=>{
+    if(!entries.length) return;
+    out+=sectionTitle(titleKey);
+    out+=`<div class="cv-timeline" style="--tl-color:${col};">`;
+    entries.forEach(e=>{
+      out+=`<div class="cv-timeline-item"><div class="cv-timeline-dot"></div><div class="cv-entry-head"><span class="cv-entry-title" style="font-size:${Math.round(12.5*fScale)}px;">${h(e[titleField])}</span><span class="cv-entry-date" style="color:${colDark2};font-size:${Math.round(10*fScale)}px;">${h(e.from)}${e.to?' – '+h(e.to):''}</span></div>${e[subField]?`<div class="cv-entry-sub" style="color:${colDark2};font-size:${Math.round(11*fScale)}px;">${h(e[subField])}</div>`:''}${e.desc?`<div class="cv-entry-desc" style="font-size:${Math.round(11*fScale)}px;line-height:${lineH};">${h(e.desc).replace(/\n/g,'<br>')}</div>`:''}</div>`;
+    });
+    out+=`</div>`;
+  };
+  renderTimelineEntries(data.exp,'cvExperience','title','company');
+  renderTimelineEntries(data.edu,'cvEducation','degree','school');
+
+  out+=buildCreativeTailSectionsHTML(data, ctx, sectionTitle);
+
+  const paper=document.getElementById('cv-paper');
+  paper.classList.add('tpl-timeline');
+  paper.classList.remove('tpl-single','tpl-ats');
+  paper.style.fontFamily='"Source Sans 3",sans-serif';
+  document.getElementById('cv-left').innerHTML='';
+  const cvRight=document.getElementById('cv-right');
+  cvRight.innerHTML=out;
+  cvRight.style.backgroundColor='#ffffff';
+
+  renderPage2Sheet(data, {col, colLight, colDark2, font, fScale, lineH, name:data.name, role:data.role, email:data.email, phone:data.phone, web:data.web, webLabel:data.webLabel});
+  updateProgress();
+}
+
 const TEMPLATE_RENDERERS = {
   sidebar: renderTemplateSidebar,
   single: renderTemplateSingleColumn,
   ats: renderTemplateATS,
+  timeline: renderTemplateTimeline,
   // weitere Templates werden hier ergänzt, sobald sie existieren (Schritt 8)
 };
 
