@@ -2098,7 +2098,7 @@ function downloadPDF(){
       const rawLinks=[];
       pg.paper.querySelectorAll('a[href]').forEach(link=>{const href=link.getAttribute('href');if(!href||href==='#')return;const pos=offRel(link,pg.paper);rawLinks.push({url:href,xPx:pos.x,yPx:pos.y,wPx:Math.max(pos.w,60),hPx:Math.max(pos.h,14)});});
       html2canvas(pg.paper,{scale:4,useCORS:true,allowTaint:true,backgroundColor:'#ffffff',logging:false,
-        onclone:doc=>{const cP=doc.getElementById(pg.paperId);const cL=doc.getElementById(pg.leftId);if(cP){cP.style.display='table';cP.style.minHeight=fullH+'px';cP.style.height=fullH+'px';}if(cL){cL.style.display='table-cell';cL.style.height=fullH+'px';cL.style.minHeight=fullH+'px';cL.style.backgroundColor=col;cL.style.background=col;}}
+        onclone:doc=>{const cP=doc.getElementById(pg.paperId);const cL=doc.getElementById(pg.leftId);if(cP){cP.style.display='flex';cP.style.alignItems='stretch';cP.style.minHeight=fullH+'px';cP.style.height=fullH+'px';}if(cL){cL.style.display='block';cL.style.flex='0 0 240px';cL.style.height=fullH+'px';cL.style.minHeight=fullH+'px';cL.style.backgroundColor=col;cL.style.background=col;}}
       }).then(canvas=>{
         if(i>0)pdf.addPage();
         const firstPage=pdf.getNumberOfPages(),imgH=(canvas.height*pW)/canvas.width;

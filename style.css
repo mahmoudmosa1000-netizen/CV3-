@@ -269,16 +269,18 @@ textarea { resize: vertical; min-height: 72px; line-height: 1.6; }
   background: #fff; width: 720px; min-height: 1050px;
   box-shadow: 0 8px 40px rgba(0,0,0,0.20);
   transform-origin: top center; transition: transform 0.2s;
-  display: table;
+  display: flex;
+  align-items: stretch;
   overflow: hidden; border-radius: 2px;
 }
 .cv-left, .cv-right {
-  display: table-cell;
-  vertical-align: top;
+  display: block;
 }
+.cv-right { flex: 1 1 auto; min-width: 0; }
 
 /* ── CV LEFT (coloured column) ── */
 .cv-left {
+  flex: 0 0 240px;
   width: 240px;
   padding: 2.5rem 1.5rem;
 }
