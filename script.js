@@ -60,7 +60,7 @@ function init() {
   const isAr=currentLang==='ar';
   document.documentElement.setAttribute('dir',isAr?'rtl':'ltr');
   document.documentElement.setAttribute('lang',currentLang);
-  buildColorPicker(); buildFontPicker(); buildSectionOrderUI();
+  buildColorPicker(); buildFontPicker(); buildTemplatePicker(); buildSectionOrderUI();
   buildRoleSuggestions();
   loadSaved(); buildDynamicLists();
   applyTranslations(); buildProfilesList();
@@ -121,6 +121,33 @@ function buildFontPicker() {
     el.className='font-opt'+(state.font===f.val?' selected':'');
     el.innerHTML=`<div class="font-opt-name" style="font-family:${f.val}">${f.label}</div><div class="font-opt-label">${t(f.subKey)}</div>`;
     el.onclick=()=>{state.font=f.val;document.querySelectorAll('.font-opt').forEach(x=>x.classList.remove('selected'));el.classList.add('selected');render();};
+    wrap.appendChild(el);
+  });
+}
+
+// ─── TEMPLATE-AUSWAHL (Schritt 7 der Template-Architektur) ──
+// Beim Wechsel bleiben alle eingegebenen Daten erhalten — es ändert
+// sich nur state.template + ein re-render(). Kein Datenverlust möglich,
+// weil render() für jedes Template dieselbe collectCVData()-Quelle nutzt
+// und danach automatisch der Vollständigkeits-Check läuft.
+const TEMPLATE_PREVIEWS = {
+  sidebar: `<div class="template-opt-preview"><div class="tp-left"></div><div class="tp-right"><div class="tp-line short"></div><div class="tp-line"></div><div class="tp-line"></div><div class="tp-line short"></div></div></div>`,
+  single: `<div class="template-opt-preview tp-single-preview"><div class="tp-avatar"></div><div class="tp-line short"></div><div class="tp-line"></div><div class="tp-line"></div></div>`,
+};
+
+function buildTemplatePicker() {
+  const wrap=document.getElementById('template-picker'); if(!wrap) return;
+  wrap.innerHTML='';
+  Object.values(TEMPLATES).forEach(tpl=>{
+    const el=document.createElement('div');
+    el.className='template-opt'+(state.template===tpl.id?' selected':'');
+    el.innerHTML=`${TEMPLATE_PREVIEWS[tpl.id]||''}<div class="template-opt-name">${t(tpl.nameKey)}</div>`;
+    el.onclick=()=>{
+      state.template=tpl.id;
+      document.querySelectorAll('.template-opt').forEach(x=>x.classList.remove('selected'));
+      el.classList.add('selected');
+      render();
+    };
     wrap.appendChild(el);
   });
 }
@@ -879,7 +906,7 @@ function importJsonResume(d){
     if(cb.goal)setVal('f-goal',cb.goal);
     if(cb.komps)setVal('f-komps',cb.komps);
     if(cb.license&&Array.isArray(cb.license)){['AM','A1','A2','A','B','BE','C1','C1E','C','CE','D1','D','T','L'].forEach(c=>{const el=document.getElementById('lic-'+c);if(el)el.checked=false;});cb.license.forEach(c=>{const el=document.getElementById('lic-'+c);if(el)el.checked=true;});}
-    buildColorPicker();buildFontPicker();
+    buildColorPicker();buildFontPicker();buildTemplatePicker();
   }
   render(); updateProgress(); showToast('✓ '+t('toastImported'));
 }
@@ -1352,21 +1379,21 @@ function renderTemplateSidebar(data){
       const entries=data.exp;
       if(!entries.length) return '';
       let s=`<div class="cv-section-head" style="color:${col};font-size:${Math.round(8.5*fScale)}px;">${t('cvExperience')}</div>`;
-      entries.forEach(e=>{s+=`<div class="cv-entry" style="border-left-color:${colLight};"><div class="cv-entry-head"><span class="cv-entry-title" style="font-size:${Math.round(12.5*fScale)}px;">${h(e.title)}</span><span class="cv-entry-date" style="color:${colDark2};font-size:${Math.round(10*fScale)}px;">${h(e.from)}${e.to?' – '+h(e.to):''}</span></div>${e.company?`<div class="cv-entry-sub" style="color:${colDark2};font-size:${Math.round(11*fScale)}px;">${h(e.company)}</div>`:''} ${e.desc?`<div class="cv-entry-desc" style="font-size:${Math.round(11*fScale)}px;line-height:${lineH};">${h(e.desc).replace(/\n/g,'<br>')}</div>`:''}</div>`;});
+      entries.forEach(e=>{s+=`<div class="cv-entry" style="border-inline-start-color:${colLight};"><div class="cv-entry-head"><span class="cv-entry-title" style="font-size:${Math.round(12.5*fScale)}px;">${h(e.title)}</span><span class="cv-entry-date" style="color:${colDark2};font-size:${Math.round(10*fScale)}px;">${h(e.from)}${e.to?' – '+h(e.to):''}</span></div>${e.company?`<div class="cv-entry-sub" style="color:${colDark2};font-size:${Math.round(11*fScale)}px;">${h(e.company)}</div>`:''} ${e.desc?`<div class="cv-entry-desc" style="font-size:${Math.round(11*fScale)}px;line-height:${lineH};">${h(e.desc).replace(/\n/g,'<br>')}</div>`:''}</div>`;});
       return s;
     },
     education:()=>{
       const entries=data.edu;
       if(!entries.length) return '';
       let s=`<div class="cv-section-head" style="color:${col};font-size:${Math.round(8.5*fScale)}px;">${t('cvEducation')}</div>`;
-      entries.forEach(e=>{s+=`<div class="cv-entry" style="border-left-color:${colLight};"><div class="cv-entry-head"><span class="cv-entry-title" style="font-size:${Math.round(12.5*fScale)}px;">${h(e.degree)}</span><span class="cv-entry-date" style="color:${colDark2};font-size:${Math.round(10*fScale)}px;">${h(e.from)}${e.to?' – '+h(e.to):''}</span></div>${e.school?`<div class="cv-entry-sub" style="color:${colDark2};font-size:${Math.round(11*fScale)}px;">${h(e.school)}</div>`:''}</div>`;});
+      entries.forEach(e=>{s+=`<div class="cv-entry" style="border-inline-start-color:${colLight};"><div class="cv-entry-head"><span class="cv-entry-title" style="font-size:${Math.round(12.5*fScale)}px;">${h(e.degree)}</span><span class="cv-entry-date" style="color:${colDark2};font-size:${Math.round(10*fScale)}px;">${h(e.from)}${e.to?' – '+h(e.to):''}</span></div>${e.school?`<div class="cv-entry-sub" style="color:${colDark2};font-size:${Math.round(11*fScale)}px;">${h(e.school)}</div>`:''}</div>`;});
       return s;
     },
     komps:()=>{
       if(!komps.trim()) return '';
       if(kompsPos==='left'){leftHTML+=`<div class="cv-l-section"><div class="cv-l-section-title">${t('cvKomps')}</div>`;komps.split('\n').forEach(k=>{if(k.trim())leftHTML+=`<span class="cv-tag">${h(k.trim())}</span>`;});leftHTML+=`</div>`;return '';}
       let s=`<div class="cv-section-head" style="color:${col};font-size:${Math.round(8.5*fScale)}px;">${t('cvKomps')}</div><div class="cv-komps">`;
-      komps.split('\n').forEach(k=>{if(k.trim())s+=`<div class="cv-komp" style="border-left-color:${colLight};font-size:${Math.round(10.5*fScale)}px;">${h(k.trim())}</div>`;});
+      komps.split('\n').forEach(k=>{if(k.trim())s+=`<div class="cv-komp" style="border-inline-start-color:${colLight};font-size:${Math.round(10.5*fScale)}px;">${h(k.trim())}</div>`;});
       return s+`</div>`;
     },
     hobbies:()=>{
@@ -1387,7 +1414,7 @@ function renderTemplateSidebar(data){
       }
       let s=`<div class="cv-section-head" style="color:${col};font-size:${Math.round(8.5*fScale)}px;">${t('cvExtraQual')}</div>`;
       if(activeLic.length){s+=`<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px;"><span style="font-size:${Math.round(11*fScale)}px;font-weight:600;color:#444;">${t('cvLicense')||'Führerschein'}:</span><div style="display:flex;flex-wrap:wrap;gap:5px;">${activeLic.map(c=>`<span style="background:${col};color:#fff;border-radius:5px;padding:2px 9px;font-size:${Math.round(10.5*fScale)}px;font-weight:700;">${c}</span>`).join('')}</div></div>`;if(licNote)s+=`<div style="font-size:${Math.round(11*fScale)}px;color:#666;margin-bottom:6px;font-style:italic;">${h(licNote)}</div>`;}
-      if(eqEntries.length){s+=`<div class="cv-komps" style="margin-top:4px;">`;eqEntries.forEach(e=>{s+=`<div class="cv-komp" style="border-left-color:${colLight};font-size:${Math.round(10.5*fScale)}px;"><span style="font-weight:700;">${h(e.title)}</span>${e.detail?`<span style="font-size:${Math.round(10*fScale)}px;color:#888;display:block;margin-top:2px;">${h(e.detail)}</span>`:''}</div>`;});s+=`</div>`;}
+      if(eqEntries.length){s+=`<div class="cv-komps" style="margin-top:4px;">`;eqEntries.forEach(e=>{s+=`<div class="cv-komp" style="border-inline-start-color:${colLight};font-size:${Math.round(10.5*fScale)}px;"><span style="font-weight:700;">${h(e.title)}</span>${e.detail?`<span style="font-size:${Math.round(10*fScale)}px;color:#888;display:block;margin-top:2px;">${h(e.detail)}</span>`:''}</div>`;});s+=`</div>`;}
       return s;
     },
     referenzen:()=>{
@@ -1401,14 +1428,14 @@ function renderTemplateSidebar(data){
       const certs=data.certs;
       if(!certs.length) return '';
       let s=`<div class="cv-section-head" style="color:${col};font-size:${Math.round(8.5*fScale)}px;">${t('cvZertifikate')}</div>`;
-      certs.forEach(c=>{const link=c.url?(c.url.startsWith('http')?c.url:'https://'+c.url):'';s+=`<div class="cv-entry" style="border-left-color:${colLight};"><div class="cv-entry-head"><span class="cv-entry-title" style="font-size:${Math.round(12.5*fScale)}px;">${link?`<a href="${link}" target="_blank" style="color:inherit;text-decoration:none;">`:''}${h(c.title)}${link?`</a>`:''}</span><span class="cv-entry-date" style="color:${colDark2};font-size:${Math.round(10*fScale)}px;">${h(c.date)}</span></div>${c.issuer?`<div class="cv-entry-sub" style="color:${colDark2};font-size:${Math.round(11*fScale)}px;">${h(c.issuer)}</div>`:''}</div>`;});
+      certs.forEach(c=>{const link=c.url?(c.url.startsWith('http')?c.url:'https://'+c.url):'';s+=`<div class="cv-entry" style="border-inline-start-color:${colLight};"><div class="cv-entry-head"><span class="cv-entry-title" style="font-size:${Math.round(12.5*fScale)}px;">${link?`<a href="${link}" target="_blank" style="color:inherit;text-decoration:none;">`:''}${h(c.title)}${link?`</a>`:''}</span><span class="cv-entry-date" style="color:${colDark2};font-size:${Math.round(10*fScale)}px;">${h(c.date)}</span></div>${c.issuer?`<div class="cv-entry-sub" style="color:${colDark2};font-size:${Math.round(11*fScale)}px;">${h(c.issuer)}</div>`:''}</div>`;});
       return s;
     },
     projekte:()=>{
       const projs=data.projects;
       if(!projs.length) return '';
       let s=`<div class="cv-section-head" style="color:${col};font-size:${Math.round(8.5*fScale)}px;">${t('cvProjekte')}</div>`;
-      projs.forEach(p=>{const link=p.url?(p.url.startsWith('http')?p.url:'https://'+p.url):'';s+=`<div class="cv-entry" style="border-left-color:${colLight};"><div class="cv-entry-head"><span class="cv-entry-title" style="font-size:${Math.round(12.5*fScale)}px;">${link?`<a href="${link}" target="_blank" style="color:${col};text-decoration:none;">`:''}${h(p.title)}${link?`</a>`:''}</span><span class="cv-entry-date" style="color:${colDark2};font-size:${Math.round(10*fScale)}px;">${h(p.from)}${p.to?' – '+h(p.to):''}</span></div>${p.url?`<div style="font-size:${Math.round(10*fScale)}px;color:${col};margin-top:2px;"><a href="${link}" target="_blank" style="color:${col};">${h(p.url)}</a></div>`:''} ${p.desc?`<div class="cv-entry-desc" style="font-size:${Math.round(11*fScale)}px;line-height:${lineH};">${h(p.desc).replace(/\n/g,'<br>')}</div>`:''}</div>`;});
+      projs.forEach(p=>{const link=p.url?(p.url.startsWith('http')?p.url:'https://'+p.url):'';s+=`<div class="cv-entry" style="border-inline-start-color:${colLight};"><div class="cv-entry-head"><span class="cv-entry-title" style="font-size:${Math.round(12.5*fScale)}px;">${link?`<a href="${link}" target="_blank" style="color:${col};text-decoration:none;">`:''}${h(p.title)}${link?`</a>`:''}</span><span class="cv-entry-date" style="color:${colDark2};font-size:${Math.round(10*fScale)}px;">${h(p.from)}${p.to?' – '+h(p.to):''}</span></div>${p.url?`<div style="font-size:${Math.round(10*fScale)}px;color:${col};margin-top:2px;"><a href="${link}" target="_blank" style="color:${col};">${h(p.url)}</a></div>`:''} ${p.desc?`<div class="cv-entry-desc" style="font-size:${Math.round(11*fScale)}px;line-height:${lineH};">${h(p.desc).replace(/\n/g,'<br>')}</div>`:''}</div>`;});
       return s;
     },
     // ── FOLIO als sortierbare Sektion (rechte Spalte, pos='right') ──
@@ -1544,7 +1571,7 @@ function renderPage2Sheet(data, ctx){
   let left2=`<div style="display:flex;justify-content:center;margin-bottom:1.5rem;"><div style="width:48px;height:48px;border-radius:50%;background:${colLight};display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:#fff;border:3px solid rgba(255,255,255,0.3);">${t('page2Circle')}</div></div><div style="text-align:center;font-weight:700;font-size:14px;margin-bottom:4px;">${h(name)}</div><div style="text-align:center;font-size:9px;opacity:0.6;margin-bottom:2rem;">${h(role)}</div><div style="font-size:8.5px;font-weight:700;opacity:0.55;border-bottom:1px solid rgba(255,255,255,0.12);padding-bottom:5px;margin-bottom:12px;">${t('cvContact')}</div>${email?`<div style="margin-bottom:8px;"><span style="font-size:8.5px;font-weight:700;opacity:0.5;display:block;">${t('cvEmail')}</span><span style="font-size:11px;opacity:.85;">${h(email)}</span></div>`:''}${phone?`<div style="margin-bottom:8px;"><span style="font-size:8.5px;font-weight:700;opacity:0.5;display:block;">${t('cvPhone')}</span><span style="font-size:11px;opacity:.85;">${h(phone)}</span></div>`:''}${web?(()=>{const wh=web.startsWith('http')?web:'https://'+web;return`<div style="margin-bottom:8px;"><span style="font-size:8.5px;font-weight:700;opacity:0.5;display:block;">${t('cvWeb')}</span><a href="${wh}" target="_blank" style="font-size:11px;color:inherit;text-decoration:underline;font-weight:700;">${h(webLabel)}</a></div>`;})():''}`;
   let right2=`<div style="font-size:${Math.round(22*fScale)}px;font-weight:700;color:#1e2e1d;margin-bottom:4px;font-family:${font};">${h(name)}</div><div style="font-size:${Math.round(11*fScale)}px;color:${colDark2};margin-bottom:12px;font-weight:500;">${h(role)}</div><div style="height:2px;margin-bottom:1.25rem;border-radius:1px;background:linear-gradient(90deg,${col} 0%,${colLight} 60%,transparent 100%);"></div>`;
   if(p2Title) right2+=`<div class="cv-section-head" style="color:${col};">${h(p2Title)}</div>`;
-  p2Entries.forEach(e=>{right2+=`<div class="cv-entry" style="border-left-color:${colLight};margin-bottom:12px;"><div class="cv-entry-head"><span class="cv-entry-title">${h(e.title)}</span></div>${e.sub?`<div class="cv-entry-sub" style="color:${colDark2};">${h(e.sub)}</div>`:''} ${e.desc?`<div class="cv-entry-desc">${h(e.desc).replace(/\n/g,'<br>')}</div>`:''}</div>`;});
+  p2Entries.forEach(e=>{right2+=`<div class="cv-entry" style="border-inline-start-color:${colLight};margin-bottom:12px;"><div class="cv-entry-head"><span class="cv-entry-title">${h(e.title)}</span></div>${e.sub?`<div class="cv-entry-sub" style="color:${colDark2};">${h(e.sub)}</div>`:''} ${e.desc?`<div class="cv-entry-desc">${h(e.desc).replace(/\n/g,'<br>')}</div>`:''}</div>`;});
   if(p2Free) right2+=`<div style="font-size:${Math.round(11*fScale)}px;color:#555;line-height:${lineH};margin-top:1rem;">${h(p2Free).replace(/\n/g,'<br>')}</div>`;
   const l2=document.getElementById('cv-left-2'); l2.style.backgroundColor=col;l2.style.color='#fff';l2.innerHTML=left2;
   document.getElementById('cv-right-2').innerHTML=right2; paper2.style.fontFamily='"Source Sans 3",sans-serif';
@@ -1602,7 +1629,7 @@ function renderTemplateSingleColumn(data){
     if(!entries.length) return;
     out+=sectionTitle(titleKey);
     entries.forEach(e=>{
-      out+=`<div class="cv-entry" style="border-left-color:${colLight};"><div class="cv-entry-head"><span class="cv-entry-title" style="font-size:${Math.round(12.5*fScale)}px;">${h(e[titleField])}</span><span class="cv-entry-date" style="color:${colDark2};font-size:${Math.round(10*fScale)}px;">${h(e.from)}${e.to?' – '+h(e.to):''}</span></div>${e[subField]?`<div class="cv-entry-sub" style="color:${colDark2};font-size:${Math.round(11*fScale)}px;">${h(e[subField])}</div>`:''}${e.desc?`<div class="cv-entry-desc" style="font-size:${Math.round(11*fScale)}px;line-height:${lineH};">${h(e.desc).replace(/\n/g,'<br>')}</div>`:''}</div>`;
+      out+=`<div class="cv-entry" style="border-inline-start-color:${colLight};"><div class="cv-entry-head"><span class="cv-entry-title" style="font-size:${Math.round(12.5*fScale)}px;">${h(e[titleField])}</span><span class="cv-entry-date" style="color:${colDark2};font-size:${Math.round(10*fScale)}px;">${h(e.from)}${e.to?' – '+h(e.to):''}</span></div>${e[subField]?`<div class="cv-entry-sub" style="color:${colDark2};font-size:${Math.round(11*fScale)}px;">${h(e[subField])}</div>`:''}${e.desc?`<div class="cv-entry-desc" style="font-size:${Math.round(11*fScale)}px;line-height:${lineH};">${h(e.desc).replace(/\n/g,'<br>')}</div>`:''}</div>`;
     });
   };
   renderEntries(data.exp,'cvExperience','title','company');
@@ -1628,7 +1655,7 @@ function renderTemplateSingleColumn(data){
 
   if(komps.trim()){
     out+=sectionTitle('cvKomps')+`<div class="cv-komps">`;
-    komps.split('\n').forEach(k=>{if(k.trim())out+=`<div class="cv-komp" style="border-left-color:${colLight};font-size:${Math.round(10.5*fScale)}px;">${h(k.trim())}</div>`;});
+    komps.split('\n').forEach(k=>{if(k.trim())out+=`<div class="cv-komp" style="border-inline-start-color:${colLight};font-size:${Math.round(10.5*fScale)}px;">${h(k.trim())}</div>`;});
     out+=`</div>`;
   }
   if(hobbies){
@@ -1644,7 +1671,7 @@ function renderTemplateSingleColumn(data){
     }
     if(data.extraquals.length){
       out+=`<div class="cv-komps" style="margin-top:4px;">`;
-      data.extraquals.forEach(e=>{out+=`<div class="cv-komp" style="border-left-color:${colLight};font-size:${Math.round(10.5*fScale)}px;"><span style="font-weight:700;">${h(e.title)}</span>${e.detail?`<span style="font-size:${Math.round(10*fScale)}px;color:#888;display:block;margin-top:2px;">${h(e.detail)}</span>`:''}</div>`;});
+      data.extraquals.forEach(e=>{out+=`<div class="cv-komp" style="border-inline-start-color:${colLight};font-size:${Math.round(10.5*fScale)}px;"><span style="font-weight:700;">${h(e.title)}</span>${e.detail?`<span style="font-size:${Math.round(10*fScale)}px;color:#888;display:block;margin-top:2px;">${h(e.detail)}</span>`:''}</div>`;});
       out+=`</div>`;
     }
   }
@@ -1656,11 +1683,11 @@ function renderTemplateSingleColumn(data){
   }
   if(data.certs.length){
     out+=sectionTitle('cvZertifikate');
-    data.certs.forEach(c=>{const link=c.url?(c.url.startsWith('http')?c.url:'https://'+c.url):'';out+=`<div class="cv-entry" style="border-left-color:${colLight};"><div class="cv-entry-head"><span class="cv-entry-title" style="font-size:${Math.round(12.5*fScale)}px;">${link?`<a href="${link}" target="_blank" style="color:inherit;text-decoration:none;">`:''}${h(c.title)}${link?`</a>`:''}</span><span class="cv-entry-date" style="color:${colDark2};font-size:${Math.round(10*fScale)}px;">${h(c.date)}</span></div>${c.issuer?`<div class="cv-entry-sub" style="color:${colDark2};font-size:${Math.round(11*fScale)}px;">${h(c.issuer)}</div>`:''}</div>`;});
+    data.certs.forEach(c=>{const link=c.url?(c.url.startsWith('http')?c.url:'https://'+c.url):'';out+=`<div class="cv-entry" style="border-inline-start-color:${colLight};"><div class="cv-entry-head"><span class="cv-entry-title" style="font-size:${Math.round(12.5*fScale)}px;">${link?`<a href="${link}" target="_blank" style="color:inherit;text-decoration:none;">`:''}${h(c.title)}${link?`</a>`:''}</span><span class="cv-entry-date" style="color:${colDark2};font-size:${Math.round(10*fScale)}px;">${h(c.date)}</span></div>${c.issuer?`<div class="cv-entry-sub" style="color:${colDark2};font-size:${Math.round(11*fScale)}px;">${h(c.issuer)}</div>`:''}</div>`;});
   }
   if(data.projects.length){
     out+=sectionTitle('cvProjekte');
-    data.projects.forEach(p=>{const link=p.url?(p.url.startsWith('http')?p.url:'https://'+p.url):'';out+=`<div class="cv-entry" style="border-left-color:${colLight};"><div class="cv-entry-head"><span class="cv-entry-title" style="font-size:${Math.round(12.5*fScale)}px;">${link?`<a href="${link}" target="_blank" style="color:${col};text-decoration:none;">`:''}${h(p.title)}${link?`</a>`:''}</span><span class="cv-entry-date" style="color:${colDark2};font-size:${Math.round(10*fScale)}px;">${h(p.from)}${p.to?' – '+h(p.to):''}</span></div>${p.desc?`<div class="cv-entry-desc" style="font-size:${Math.round(11*fScale)}px;line-height:${lineH};">${h(p.desc).replace(/\n/g,'<br>')}</div>`:''}</div>`;});
+    data.projects.forEach(p=>{const link=p.url?(p.url.startsWith('http')?p.url:'https://'+p.url):'';out+=`<div class="cv-entry" style="border-inline-start-color:${colLight};"><div class="cv-entry-head"><span class="cv-entry-title" style="font-size:${Math.round(12.5*fScale)}px;">${link?`<a href="${link}" target="_blank" style="color:${col};text-decoration:none;">`:''}${h(p.title)}${link?`</a>`:''}</span><span class="cv-entry-date" style="color:${colDark2};font-size:${Math.round(10*fScale)}px;">${h(p.from)}${p.to?' – '+h(p.to):''}</span></div>${p.desc?`<div class="cv-entry-desc" style="font-size:${Math.round(11*fScale)}px;line-height:${lineH};">${h(p.desc).replace(/\n/g,'<br>')}</div>`:''}</div>`;});
   }
 
   const qrLinks=data.folioLinks.filter(l=>l.showQR&&l.qrDataUrl);
@@ -1808,7 +1835,7 @@ function applyData(d){
   (d.extraquals||[]).forEach(e=>addExtraQual(e));(d.refs||[]).forEach(r=>addRef(r));
   (d.certs||[]).forEach(c=>addCert(c));(d.projects||[]).forEach(p=>addProject(p));
   (d.p2entries||[]).forEach(e=>addPage2Entry(e));
-  buildColorPicker();buildFontPicker();updateCharCount();render();
+  buildColorPicker();buildFontPicker();buildTemplatePicker();updateCharCount();render();
 }
 
 // ─── SAVE / LOAD ─────────────────────────────────
