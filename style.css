@@ -283,6 +283,19 @@ textarea { resize: vertical; min-height: 72px; line-height: 1.6; }
   flex: 0 0 240px;
   width: 240px;
   padding: 2.5rem 1.5rem;
+  position: relative;
+}
+/* Harte, garantiert gerade Kante am rechten Rand der Sidebar.
+   Übermalt das weiche Anti-Aliasing/JPEG-Verschwimmen zwischen
+   grüner Fläche und weißem Bereich, das beim PDF-Export als
+   "schräge" Linie wahrgenommen werden kann. */
+.cv-left::after {
+  content: '';
+  position: absolute;
+  top: 0; right: 0; bottom: 0;
+  width: 1.5px;
+  background: rgba(0,0,0,0.28);
+  pointer-events: none;
 }
 
 /* High-quality photo rendering */
