@@ -248,17 +248,21 @@ textarea { resize: vertical; min-height: 72px; line-height: 1.6; }
 .cv-ats-entry-head { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; }
 
 /* ── TEMPLATE: TIMELINE (Erfahrung/Bildung als vertikale Zeitleiste) ── */
-.cv-timeline { position: relative; padding-inline-start: 24px; margin-top: 4px; }
+.cv-timeline { position: relative; padding-left: 24px; margin-top: 4px; }
 .cv-timeline::before {
-  content: ''; position: absolute; inset-inline-start: 6px; top: 2px; bottom: 2px;
+  content: ''; position: absolute; left: 6px; top: 2px; bottom: 2px;
   width: 2px; background: var(--tl-color, #ccc);
+  transform: translateZ(0); /* erzwingt pixelgenaues, nicht-verschwommenes Rendering (auch bei html2canvas) */
 }
 .cv-timeline-item { position: relative; margin-bottom: 16px; }
 .cv-timeline-dot {
-  position: absolute; inset-inline-start: -22px; top: 3px; width: 10px; height: 10px;
+  position: absolute; left: -22px; top: 3px; width: 10px; height: 10px;
   border-radius: 50%; background: var(--tl-color, #999);
   border: 2px solid #fff; box-shadow: 0 0 0 1.5px var(--tl-color, #999);
 }
+[dir="rtl"] .cv-timeline { padding-left: 0; padding-right: 24px; }
+[dir="rtl"] .cv-timeline::before { left: auto; right: 6px; }
+[dir="rtl"] .cv-timeline-dot { left: auto; right: -22px; }
 
 /* ── CV PAPER ── */
 .cv-paper {
@@ -350,14 +354,16 @@ textarea { resize: vertical; min-height: 72px; line-height: 1.6; }
   display: flex; align-items: center; gap: 8px;
 }
 .cv-section-head::after { content: ''; flex: 1; height: 1px; background: #dde8db; }
-.cv-entry        { margin-bottom: 11px; padding-inline-start: 11px; border-inline-start: 2.5px solid #dde8db; }
+.cv-entry        { margin-bottom: 11px; padding-left: 11px; border-left: 2.5px solid #dde8db; }
 .cv-entry-head   { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; }
 .cv-entry-title  { font-weight: 700; font-size: 12.5px; color: #1a2818; }
 .cv-entry-date   { font-size: 10px; white-space: nowrap; font-weight: 500; opacity: 0.65; }
 .cv-entry-sub    { font-size: 11px; font-style: italic; margin-top: 2px; opacity: 0.72; }
 .cv-entry-desc   { font-size: 11px; color: #555; margin-top: 5px; line-height: 1.7; }
 .cv-komps        { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-top: 7px; }
-.cv-komp         { font-size: 10.5px; color: #444; padding: 5px 9px; background: #f2f7f1; border-radius: 4px; border-inline-start: 2.5px solid #8db08a; line-height: 1.4; }
+.cv-komp         { font-size: 10.5px; color: #444; padding: 5px 9px; background: #f2f7f1; border-radius: 4px; border-left: 2.5px solid #8db08a; line-height: 1.4; }
+[dir="rtl"] .cv-entry { padding-left: 0; padding-right: 11px; border-left: none; border-right: 2.5px solid #dde8db; }
+[dir="rtl"] .cv-komp  { border-left: none; border-right: 2.5px solid #8db08a; }
 
 /* ── RESPONSIVE ── */
 @media (max-width: 900px) {
