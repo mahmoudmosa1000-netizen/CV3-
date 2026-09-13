@@ -133,6 +133,7 @@ function buildFontPicker() {
 const TEMPLATE_PREVIEWS = {
   sidebar: `<div class="template-opt-preview"><div class="tp-left"></div><div class="tp-right"><div class="tp-line short"></div><div class="tp-line"></div><div class="tp-line"></div><div class="tp-line short"></div></div></div>`,
   single: `<div class="template-opt-preview tp-single-preview"><div class="tp-avatar"></div><div class="tp-line short"></div><div class="tp-line"></div><div class="tp-line"></div></div>`,
+  ats: `<div class="template-opt-preview tp-single-preview"><div class="tp-line short" style="background:#333;"></div><div class="tp-line"></div><div class="tp-line"></div><div class="tp-line short"></div></div>`,
 };
 
 function buildTemplatePicker() {
@@ -1120,6 +1121,13 @@ const TEMPLATES = {
     hasSidebar: false,              // keine linke Spalte — alles fließt in eine Spalte
     supportsLeftRight: false,       // links/rechts-Wahl ergibt hier keinen Sinn, wird ignoriert (siehe collectCVData)
   },
+  ats: {
+    id: 'ats',
+    nameKey: 'tplAtsName',
+    hasSidebar: false,
+    supportsLeftRight: false,
+    plain: true,                    // keine Farbflächen/Balken/Icons — bewusst reiner Text für Bewerbungstracking-Systeme
+  },
   // Weitere Templates (einspaltig, Header oben, Timeline, ATS-kompakt, Kreativ)
   // werden hier mit ihren eigenen Capability-Flags ergänzt (Schritt 5+8).
 };
@@ -1547,7 +1555,7 @@ function renderTemplateSidebar(data){
     initFolioOverlayDrag(ov, l.id);
   });
 
-  document.getElementById('cv-paper').classList.remove('tpl-single');
+  document.getElementById('cv-paper').classList.remove('tpl-single','tpl-ats');
   const cvLeft=document.getElementById('cv-left');
   cvLeft.style.backgroundColor=col; cvLeft.style.color='#fff'; cvLeft.innerHTML=leftHTML;
   const cvRight=document.getElementById('cv-right');
@@ -1699,6 +1707,7 @@ function renderTemplateSingleColumn(data){
 
   const paper=document.getElementById('cv-paper');
   paper.classList.add('tpl-single');
+  paper.classList.remove('tpl-ats');
   paper.style.fontFamily='"Source Sans 3",sans-serif';
   document.getElementById('cv-left').innerHTML='';
   const cvRight=document.getElementById('cv-right');
@@ -1709,9 +1718,108 @@ function renderTemplateSingleColumn(data){
   updateProgress();
 }
 
+// ═══════════════════════════════════════════════
+//  TEMPLATE: ATS-KOMPAKT
+//  Bewusst schlicht: kein Foto, keine Farbflächen, keine Skill-
+//  Balken/Prozentzahlen als Grafik, kein Grid-Layout für Referenzen —
+//  nur klarer, linear lesbarer Text mit Standard-Überschriften.
+//  Grund: Bewerber-Tracking-Systeme parsen Grafiken/Layouts oft
+//  falsch oder gar nicht; reiner Fließtext ist am zuverlässigsten.
+// ═══════════════════════════════════════════════
+function renderTemplateATS(data){
+  const {name, role, email, phone, address, birth, web, webLabel, linkedin, summary, goal, komps, hobbies, activeLic, licNote} = data;
+
+  const contactBits=[];
+  if(email) contactBits.push(h(email));
+  if(phone) contactBits.push(h(phone));
+  if(address) contactBits.push(h(address));
+  if(birth) contactBits.push(h(birth));
+  if(web){const href=web.startsWith('http')?web:'https://'+web;contactBits.push(`<a href="${href}" target="_blank" style="color:#111;">${h(webLabel)}</a>`);}
+  if(linkedin){const href=linkedin.startsWith('http')?linkedin:'https://'+linkedin;contactBits.push(`<a href="${href}" target="_blank" style="color:#111;">LinkedIn</a>`);}
+  if(data.folio&&data.folioShowLink){const href=data.folio.startsWith('http')?data.folio:'https://'+data.folio;contactBits.push(`<a href="${href}" target="_blank" style="color:#111;">${h(data.folioLabel)}</a>`);}
+  data.folioLinks.filter(l=>l.showLink).forEach(l=>{const href=l.url.startsWith('http')?l.url:'https://'+l.url;contactBits.push(`<a href="${href}" target="_blank" style="color:#111;">${h(l.label||l.url)}</a>`);});
+
+  let out=`<div class="cv-ats-header">
+    <div style="font-size:22px;font-weight:700;color:#111;">${h(name)}</div>
+    <div style="font-size:12px;color:#333;margin-top:2px;">${h(role)}</div>
+    <div class="cv-ats-contact-row">${contactBits.join(' &nbsp;·&nbsp; ')}</div>
+  </div>`;
+
+  const sectionTitle=key=>`<div class="cv-ats-section-title">${t(key)}</div>`;
+
+  if(summary||goal){
+    out+=sectionTitle('cvProfile');
+    if(summary) out+=`<div style="font-size:11.5px;line-height:1.7;color:#222;">${h(summary)}</div>`;
+    if(goal) out+=`<div style="font-size:11.5px;line-height:1.7;color:#222;margin-top:5px;">${h(goal)}</div>`;
+  }
+
+  const renderEntries=(entries,titleKey,titleField,subField)=>{
+    if(!entries.length) return;
+    out+=sectionTitle(titleKey);
+    entries.forEach(e=>{
+      out+=`<div class="cv-ats-entry"><div class="cv-ats-entry-head"><span style="font-weight:700;font-size:12px;color:#111;">${h(e[titleField])}</span><span style="font-size:10.5px;color:#555;white-space:nowrap;">${h(e.from)}${e.to?' – '+h(e.to):''}</span></div>${e[subField]?`<div style="font-size:11px;font-style:italic;color:#444;">${h(e[subField])}</div>`:''}${e.desc?`<div style="font-size:11px;color:#333;line-height:1.65;margin-top:3px;">${h(e.desc).replace(/\n/g,'<br>')}</div>`:''}</div>`;
+    });
+  };
+  renderEntries(data.exp,'cvExperience','title','company');
+  renderEntries(data.edu,'cvEducation','degree','school');
+
+  // Skills als reiner Komma-Text statt Balken — für ATS-Keyword-Erkennung optimal
+  if(data.skills.length){
+    out+=sectionTitle('cvSkills');
+    out+=`<div style="font-size:11.5px;color:#222;line-height:1.7;">${data.skills.map(s=>h(s.name)).join(', ')}</div>`;
+  }
+
+  if(data.langs.length){
+    out+=sectionTitle('cvLanguages');
+    const lvLabelMap={native:t('optNative'),advanced:t('optAdvanced'),intermediate:t('optIntermediate'),basic:t('optBasic'),Muttersprache:t('optNative'),Fortgeschritten:t('optAdvanced'),Mittelstufe:t('optIntermediate'),Grundkenntnisse:t('optBasic')};
+    out+=`<div style="font-size:11.5px;color:#222;line-height:1.7;">${data.langs.map(l=>`${h(l.name)} (${lvLabelMap[l.level]||h(l.level)})`).join(', ')}</div>`;
+  }
+
+  if(komps.trim()){
+    out+=sectionTitle('cvKomps');
+    out+=`<div style="font-size:11.5px;color:#222;line-height:1.7;">${komps.split('\n').filter(k=>k.trim()).map(k=>h(k.trim())).join(', ')}</div>`;
+  }
+
+  if(activeLic.length||data.extraquals.length){
+    out+=sectionTitle('cvExtraQual');
+    if(activeLic.length) out+=`<div style="font-size:11.5px;color:#222;margin-bottom:4px;"><strong>${t('cvLicense')||'Führerschein'}:</strong> ${activeLic.join(', ')}${licNote?' — '+h(licNote):''}</div>`;
+    data.extraquals.forEach(e=>{out+=`<div style="font-size:11.5px;color:#222;margin-bottom:3px;"><strong>${h(e.title)}</strong>${e.detail?' — '+h(e.detail):''}</div>`;});
+  }
+
+  if(data.refs.length){
+    out+=sectionTitle('cvReferenzen');
+    data.refs.forEach(r=>{out+=`<div style="font-size:11.5px;color:#222;margin-bottom:5px;"><strong>${h(r.name)}</strong>${r.pos?', '+h(r.pos):''}${r.company?', '+h(r.company):''}${r.email?' — '+h(r.email):''}${r.phone?' — '+h(r.phone):''}${r.note?' ('+h(r.note)+')':''}</div>`;});
+  }
+  if(data.certs.length){
+    out+=sectionTitle('cvZertifikate');
+    data.certs.forEach(c=>{out+=`<div class="cv-ats-entry"><div class="cv-ats-entry-head"><span style="font-weight:700;font-size:12px;color:#111;">${h(c.title)}</span><span style="font-size:10.5px;color:#555;">${h(c.date)}</span></div>${c.issuer?`<div style="font-size:11px;font-style:italic;color:#444;">${h(c.issuer)}</div>`:''}</div>`;});
+  }
+  if(data.projects.length){
+    out+=sectionTitle('cvProjekte');
+    data.projects.forEach(p=>{out+=`<div class="cv-ats-entry"><div class="cv-ats-entry-head"><span style="font-weight:700;font-size:12px;color:#111;">${h(p.title)}</span><span style="font-size:10.5px;color:#555;">${h(p.from)}${p.to?' – '+h(p.to):''}</span></div>${p.desc?`<div style="font-size:11px;color:#333;line-height:1.65;margin-top:3px;">${h(p.desc).replace(/\n/g,'<br>')}</div>`:''}</div>`;});
+  }
+  if(hobbies){
+    out+=sectionTitle('cvInterests');
+    out+=`<div style="font-size:11.5px;color:#222;line-height:1.7;">${hobbies.split(',').filter(x=>x.trim()).map(x=>h(x.trim())).join(', ')}</div>`;
+  }
+
+  const paper=document.getElementById('cv-paper');
+  paper.classList.add('tpl-ats');
+  paper.classList.remove('tpl-single');
+  paper.style.fontFamily='"Source Sans 3",sans-serif';
+  document.getElementById('cv-left').innerHTML='';
+  const cvRight=document.getElementById('cv-right');
+  cvRight.innerHTML=out;
+  cvRight.style.backgroundColor='#ffffff';
+
+  renderPage2Sheet(data, {col:'#111111', colLight:'#666', colDark2:'#333', font:data.font, fScale:data.fScale, lineH:data.lineH, name, role, email, phone, web, webLabel});
+  updateProgress();
+}
+
 const TEMPLATE_RENDERERS = {
   sidebar: renderTemplateSidebar,
   single: renderTemplateSingleColumn,
+  ats: renderTemplateATS,
   // weitere Templates werden hier ergänzt, sobald sie existieren (Schritt 8)
 };
 
